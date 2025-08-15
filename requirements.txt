@@ -1,0 +1,5 @@
+# DEPENDÊNCIAS PARA RODAR O PROJETO:
+
+fastapi
+uvicorn
+jinja2

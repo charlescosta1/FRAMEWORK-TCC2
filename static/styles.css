@@ -9,9 +9,10 @@ body, html {
     flex-direction: column;
     justify-content: center; /* centraliza verticalmente */
     align-items: center;     /* centraliza horizontalmente */
-    background-color: #f5f5f5;
+    background-color: #2e2e2e;
 }
-h1 {
+h2 {
+
     margin-bottom: 20px;
     color: #333;
 }
@@ -37,5 +38,5 @@ button {
     font-size: 16px;
 }
 button:hover {
-    background-color: #005fa3;
+    background-color: #2b2b2b;
 }
