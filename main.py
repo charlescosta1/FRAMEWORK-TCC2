@@ -86,10 +86,10 @@ async def chat_page(request: Request):
 def query_ollama(model_name: str, prompt: str) -> str:
     try:
         response = ollama.chat(
-            model=model_name, #<- desse modo não fica definido qual o modelo, abaixo já defini como llama3.1:8b
+            model=model_name, #<- desse modo não executa o DeepSeek,
             #model="llama3.1:8b",
             messages=[
-                #{"role": "system", "content": "Você é um assistente que responde perguntas sobre documentos PDF."},
+                {"role": "system", "content": "Você é um assistente que responde perguntas sobre documentos PDF."},
                 {"role": "user", "content": prompt},
             ]
         )

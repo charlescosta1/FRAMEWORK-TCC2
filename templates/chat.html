@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat com IA</title>
+    <title>Upload de PDF - Protótipo Framework</title>
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-    <!-- Navbar fixa -->
+    <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-container">
             <span class="navbar-title">Framework PDF</span>
@@ -22,7 +22,7 @@
             <textarea id="question" placeholder="Digite sua pergunta..."></textarea>
             <select id="model">
                 <option value="llama3.1:8b">LLaMA</option>
-                <option value="deepseek-r1">DeepSeek</option>
+                <option value="deepseek-r1:8b">DeepSeek</option>
             </select>
             <button onclick="sendQuestion()">Enviar</button>
         </div>
