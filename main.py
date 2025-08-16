@@ -84,19 +84,18 @@ async def chat_page(request: Request):
   
 
 def query_ollama(model_name: str, prompt: str) -> str:
-
-    # chama o modelo (Ollama) localmente e retorna a resposta.
     try:
-        result = subprocess.run(
-            #["ollama", "run", "llama3.1"],
-            #input=prompt.encode(),
-            input=prompt,
-            capture_output=True,
-            text=True
+        response = ollama.chat(
+            model=model_name,
+            messages=[
+                #{"role": "system", "content": "Você é um assistente que responde perguntas sobre documentos PDF."},
+                {"role": "user", "content": prompt},
+            ]
         )
-        return result.stdout.strip()
+        return response["message"]["content"]
     except Exception as e:
         return f"Erro ao chamar Ollama: {e}"
+
 
 # rota para a parte em que o modelo retorna uma resposta
 
@@ -114,3 +113,5 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
     answer = query_ollama(model, prompt)
 
     return {"answer": answer}
+
+
