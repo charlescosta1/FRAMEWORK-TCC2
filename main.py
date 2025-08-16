@@ -9,6 +9,7 @@ import shutil
 import os
 import pdfplumber
 import subprocess
+import ollama
 
 # cria a aplicação
 app = FastAPI()
@@ -87,7 +88,7 @@ def query_ollama(model_name: str, prompt: str) -> str:
     # chama o modelo (Ollama) localmente e retorna a resposta.
     try:
         result = subprocess.run(
-            ["ollama", "run", model_name],
+            #["ollama", "run", "llama3.1"],
             #input=prompt.encode(),
             input=prompt,
             capture_output=True,
