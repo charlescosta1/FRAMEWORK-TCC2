@@ -1,6 +1,6 @@
 # principais imports do FastAPI
 from fastapi import FastAPI, File, UploadFile, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 import shutil
 import os
 import pdfplumber
+import subprocess
 
 # cria a aplicação
 app = FastAPI()
@@ -22,15 +23,19 @@ templates = Jinja2Templates(directory="templates")
 UPLOAD_DIR = "uploads" 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Variáveis globais para armazenar conteúdo do PDF
+pdf_text = ""
+pdf_tables = []
+
 # rota da página inicial
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-
     return templates.TemplateResponse("index.html", {"request": request})
 
 # rota para upload dos PDFs e extração com o pdfplumber
 @app.post("/upload-pdf/")
 async def upload_pdf(file: UploadFile = File(...)):
+    global pdf_text, pdf_tables
 
     # caminho onde o arquivo será salvo
     file_location = os.path.join(UPLOAD_DIR, file.filename)
@@ -57,34 +62,53 @@ async def upload_pdf(file: UploadFile = File(...)):
             if tables:
                 extracted_tables.extend(tables)
 
-    # Aqui você já poderia passar extracted_text e extracted_tables
-    # para o Ollama ou GPT API
-    # Por enquanto, vamos só retornar no JSON
-    return {
-        "filename": file.filename,
-        "message": "Arquivo PDF enviado e processado com sucesso!",
-        "text_excerpt": extracted_text[:500],  # primeiros 500 caracteres
-        "tables_count": len(extracted_tables)
-    }
+    pdf_text = extracted_text
+    pdf_tables = extracted_tables
 
-@app.post("/chat/", response_class=HTMLResponse)
-async def chat(request: Request, question: str = Form(...)):
-    """
-    Recebe a pergunta do usuário e envia para o modelo (Ollama ou GPT API)
-    """
-    global pdf_text, pdf_tables
+    return RedirectResponse(url="/chat/", status_code=303)
 
-    # Aqui você chamaria o Ollama ou GPT API
-    # Por enquanto simula a resposta
-    model_answer = f"Você perguntou: {question}. (Aqui a resposta do Ollama sobre o PDF iria.)"
+    # retorno do JSON para testar se está extraindo o pdf
+    #return {
+    #    "filename": file.filename,
+    #    "message": "Arquivo PDF enviado e processado com sucesso!",
+    #    "text_excerpt": pdf_text,
+    #    "tables_count": len(pdf_tables)
+    #}
 
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "text_excerpt": pdf_text[:500],
-            "tables_count": len(pdf_tables),
-            "user_question": question,
-            "model_answer": model_answer
-        }
-    )
+# rota para a parte de conversação com o modelo, sobre o PDF
+
+@app.get("/chat/", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    return templates.TemplateResponse("chat.html", {"request": request})
+  
+
+def query_ollama(model_name: str, prompt: str) -> str:
+
+    # chama o modelo (Ollama) localmente e retorna a resposta.
+    try:
+        result = subprocess.run(
+            ["ollama", "run", model_name],
+            input=prompt.encode(),
+            capture_output=True,
+            text=True
+        )
+        return result.stdout.strip()
+    except Exception as e:
+        return f"Erro ao chamar Ollama: {e}"
+
+# rota para a parte em que o modelo retorna uma resposta
+
+@app.post("/chat/ask")
+async def ask_model(question: str = Form(...), model: str = Form(...)):
+    global pdf_text
+
+    if not pdf_text:
+        return JSONResponse({"error": "Nenhum PDF carregado"}, status_code=400)
+
+    # monta o prompt baseado no conteúdo do PDF
+    prompt = f"Baseando-se no seguinte documento:\n\n{pdf_text}\n\nPergunta: {question}"
+
+    # chama o Ollama
+    answer = query_ollama(model, prompt)
+
+    return {"answer": answer}
