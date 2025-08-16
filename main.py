@@ -88,7 +88,8 @@ def query_ollama(model_name: str, prompt: str) -> str:
     try:
         result = subprocess.run(
             ["ollama", "run", model_name],
-            input=prompt.encode(),
+            #input=prompt.encode(),
+            input=prompt,
             capture_output=True,
             text=True
         )
