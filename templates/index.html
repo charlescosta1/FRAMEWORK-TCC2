@@ -6,8 +6,15 @@
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <span class="navbar-title">Framework PDF</span>
+        </div>
+    </nav>
     <div class="container">
-        <h2>Insira abaixo o documento PDF</h2>
+        <h1>Insira abaixo o documento PDF</h1>
+        <p>E aguarde um pouco até que a IA leia o documento</p>
         <form action="/upload-pdf/" method="post" enctype="multipart/form-data">
             <input type="file" name="file" accept=".pdf" required />
             <button type="submit">Enviar PDF</button>

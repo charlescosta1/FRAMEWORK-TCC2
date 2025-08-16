@@ -3,21 +3,27 @@ body, html {
     margin: 0;
     font-family: Arial, sans-serif;
 }
+
 .container {
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center; /* centraliza verticalmente */
     align-items: center;     /* centraliza horizontalmente */
-    background-color: #2e2e2e;
+    background-color: #cfcfcf;
 }
-h2 {
 
+h1{
     margin-bottom: 20px;
     color: #333;
 }
+
+p{
+    color: #333333e1;
+}
+
 form {
-    background: white;
+    background: rgb(233, 233, 233);
     padding: 30px 40px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -25,9 +31,11 @@ form {
     flex-direction: column;
     align-items: center;
 }
+
 input[type="file"] {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
+
 button {
     background-color: #0078d4;
     border: none;
@@ -37,6 +45,29 @@ button {
     cursor: pointer;
     font-size: 16px;
 }
+
 button:hover {
-    background-color: #2b2b2b;
+    background-color: #000d83e1;
+}
+
+.navbar {
+    background-color: #000d83e1;
+    padding: 15px 20px;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.navbar-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.navbar-title {
+    font-size: 1.2rem;
+    font-weight: bold;
 }
