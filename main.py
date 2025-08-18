@@ -10,6 +10,7 @@ import os
 import pdfplumber
 import subprocess
 import ollama
+from openai import OpenAI
 
 # cria a aplicação
 app = FastAPI()
@@ -27,6 +28,16 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Variáveis globais para armazenar conteúdo do PDF
 pdf_text = ""
 pdf_tables = []
+
+# Pega a chave da variável de ambiente do github models para integração da API
+GITHUB_TOKEN = "TOKEN_AQUI"
+GITHUB_MODEL_DEFAULT = "openai/gpt-4o-mini"
+MODEL_NAME = "openai/gpt-4o"
+
+client_openai = OpenAI(
+    base_url="https://models.github.ai/inference",
+    api_key=GITHUB_TOKEN
+)
 
 # rota da página inicial
 @app.get("/", response_class=HTMLResponse)
@@ -97,7 +108,20 @@ def query_ollama(model_name: str, prompt: str) -> str:
     except Exception as e:
         return f"Erro ao chamar Ollama: {e}"
 
-
+def query_github_openai(prompt: str, model_name: str = GITHUB_MODEL_DEFAULT) -> str:
+    try:
+        response = client_openai.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "Você é um assistente que responde perguntas sobre PDFs."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=1000
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Erro ao chamar GitHub/OpenAI: {e}"
+    
 # rota para a parte em que o modelo retorna uma resposta
 
 @app.post("/chat/ask")
@@ -110,8 +134,11 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
     # monta o prompt baseado no conteúdo do PDF
     prompt = f"Baseando-se no seguinte documento:\n\n{pdf_text}\n\nPergunta: {question}"
 
-    # chama o Ollama
-    answer = query_ollama(model, prompt)
+    # Escolhe se é a api do github models ou o ollama local
+    if model.lower().startswith("gpt-") or model.lower().startswith("openai/"):
+        answer = query_github_openai(prompt, model_name=model)
+    else:
+        answer = query_ollama(model, prompt)
 
     return {"answer": answer}
 
