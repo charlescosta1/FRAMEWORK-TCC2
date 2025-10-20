@@ -2,23 +2,224 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <title>Upload de PDF - Protótipo Framework</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Framework PDF</title>
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="navbar-container">
-            <span class="navbar-title">Framework PDF</span>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="app-title">Framework PDF</h1>
         </div>
-    </nav>
-    <div class="container">
-        <h1>Insira abaixo o documento PDF</h1>
-        <p>E aguarde um pouco até que a IA leia o documento</p>
-        <form action="/upload-pdf/" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".pdf" required />
-            <button type="submit">Enviar PDF</button>
-        </form>
-    </div>
+        
+        <button class="new-chat-btn" onclick="newChat()">
+            <span class="plus-icon">+</span> Nova Conversa
+        </button>
+
+        <div class="conversations-section">
+            <h3 class="section-title">Conversas</h3>
+            <div class="conversations-list" id="conversationsList">
+                <!-- Conversas serão adicionadas aqui -->
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="clearAll-btn" onclick="clearAll()">🗑️ Apagar todos as conversas.</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="model-selector">
+                <label for="modelSelect">Modelo:</label>
+                <select id="modelSelect">
+                    <option value="llama3.1:8b">LLaMA 3.1</option>
+                    <option value="deepseek-r1:8b">DeepSeek R1</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="openai/gpt-4o">GPT-4o</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="messages-container" id="messagesContainer">
+                <!-- Mensagens aparecem aqui -->
+                <div class="welcome-message">
+                    <h2>Bem-vindo ao Framework PDF</h2>
+                    <p>Envie um PDF para começar a fazer perguntas</p>
+                    <label class="file-upload-label">
+                        <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload()" />
+                        <span>📎 Anexar PDF</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea 
+                    id="questionInput" 
+                    placeholder="Digite sua pergunta ou envie um PDF..." 
+                    rows="1"
+                ></textarea>
+                <button class="send-btn" onclick="sendQuestion()">
+                    <span>Enviar</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentConversation = null;
+        let conversations = JSON.parse(localStorage.getItem('conversations')) || [];
+
+        function loadConversations() {
+            const list = document.getElementById('conversationsList');
+            list.innerHTML = '';
+            conversations.forEach((conv, index) => {
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                if (conv.id === currentConversation) item.classList.add('active');
+                item.innerHTML = `<span onclick="selectConversation(${index})">${conv.title}</span>`;
+                list.appendChild(item);
+            });
+        }
+
+        function newChat() {
+            currentConversation = Date.now();
+            const numeroConversa = conversations.length + 1;
+            conversations.push({
+                id: currentConversation,
+                title: `Conversa #${numeroConversa}: ${file.name}`,
+                messages: []
+            });
+            localStorage.setItem('conversations', JSON.stringify(conversations));
+            clearMessages();
+            loadConversations();
+        }
+
+        function selectConversation(index) {
+            currentConversation = conversations[index].id;
+            displayMessages();
+            loadConversations();
+        }
+
+        function clearMessages() {
+            document.getElementById('messagesContainer').innerHTML = `
+            <div class="messages-container" id="messagesContainer">
+                <!-- Mensagens aparecem aqui -->
+                <div class="welcome-message">
+                    <h2>Bem-vindo ao Framework PDF</h2>
+                    <p>Envie um PDF para começar a fazer perguntas</p>
+                    <label class="file-upload-label">
+                        <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload()" />
+                        <span>📎 Anexar PDF</span>
+                    </label>
+                </div>
+            `;
+        }
+
+        function displayMessages() {
+            if (!currentConversation) return;
+            const conv = conversations.find(c => c.id === currentConversation);
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            if (conv && conv.messages.length > 0) {
+                conv.messages.forEach(msg => {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `message ${msg.role}`;
+                    msgDiv.textContent = msg.content;
+                    container.appendChild(msgDiv);
+                });
+            }
+        }
+
+        async function handleFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/upload-pdf/', { method: 'POST', body: formData });
+                if (res.ok) {
+                    if (!currentConversation) newChat();
+                    addMessage('system', `📄 PDF "${file.name}" carregado com sucesso! Você já pode fazer perguntas sobre o documento!`);
+                    fileInput.value = '';
+                }
+            } catch (err) {
+                addMessage('system', 'Erro ao enviar PDF');
+            }
+        }
+
+        async function sendQuestion() {
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+            if (!question) return;
+
+            if (!currentConversation) newChat();
+
+            addMessage('user', question);
+            input.value = '';
+
+            const model = document.getElementById('modelSelect').value;
+            const formData = new FormData();
+            formData.append('question', question);
+            formData.append('model', model);
+
+            addMessage('system', 'Processando...');
+
+            try {
+                const res = await fetch('/chat/ask', { method: 'POST', body: formData });
+                const data = await res.json();
+                removeLastMessage();
+                addMessage('assistant', data.answer || data.error);
+            } catch (err) {
+                removeLastMessage();
+                addMessage('assistant', 'Erro na comunicação com o servidor');
+            }
+        }
+
+        function addMessage(role, content) {
+            if (currentConversation) {
+                const conv = conversations.find(c => c.id === currentConversation);
+                if (conv) {
+                    conv.messages.push({ role, content });
+                    localStorage.setItem('conversations', JSON.stringify(conversations));
+                }
+            }
+
+            const container = document.getElementById('messagesContainer');
+            if (container.innerHTML.includes('welcome-message')) {
+                container.innerHTML = '';
+            }
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            msgDiv.textContent = content;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeLastMessage() {
+            const container = document.getElementById('messagesContainer');
+            const messages = container.querySelectorAll('.message');
+            if (messages.length > 0) {
+                messages[messages.length - 1].remove();
+            }
+        }function clearAll() {
+            localStorage.removeItem('conversations');
+            location.reload();
+        }
+
+        loadConversations();
+    </script>
 </body>
 </html>
