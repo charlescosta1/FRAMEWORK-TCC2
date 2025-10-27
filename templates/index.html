@@ -36,10 +36,11 @@
             <div class="model-selector">
                 <label for="modelSelect">Modelo:</label>
                 <select id="modelSelect">
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
                     <option value="llama3.1:8b">LLaMA 3.1</option>
                     <option value="deepseek-r1:8b">DeepSeek R1</option>
-                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                    <option value="openai/gpt-4o">GPT-4o</option>
+                    <option value="all">Todos os Modelos</option>
                 </select>
             </div>
         </header>
@@ -62,17 +63,30 @@
         <!-- Input Area -->
         <div class="input-area">
             <div class="input-wrapper">
-                <textarea 
+                <textarea
                     id="questionInput" 
-                    placeholder="Digite sua pergunta ou envie um PDF..." 
+                    placeholder="Digite sua pergunta..." 
                     rows="1"
                 ></textarea>
-                <button class="send-btn" onclick="sendQuestion()">
+                <button type="submit" class="send-btn"  onclick="sendQuestion()">
                     <span>Enviar</span>
                 </button>
             </div>
         </div>
     </main>
+
+    <script>
+    const textarea = document.getElementById("questionInput");
+
+    textarea.addEventListener("keydown", function (event) {
+        // Se apertar Enter sem Shift
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault(); // Evita quebra de linha
+            sendQuestion(); // Chama a função de envio
+        }
+    });
+
+</script>
 
     <script>
         let currentConversation = null;
@@ -95,7 +109,7 @@
             const numeroConversa = conversations.length + 1;
             conversations.push({
                 id: currentConversation,
-                title: `Conversa #${numeroConversa}: ${file.name}`,
+                title: `Conversa #${numeroConversa}`,
                 messages: []
             });
             localStorage.setItem('conversations', JSON.stringify(conversations));
@@ -106,7 +120,6 @@
         function selectConversation(index) {
             currentConversation = conversations[index].id;
             displayMessages();
-            loadConversations();
         }
 
         function clearMessages() {
@@ -133,7 +146,7 @@
                 conv.messages.forEach(msg => {
                     const msgDiv = document.createElement('div');
                     msgDiv.className = `message ${msg.role}`;
-                    msgDiv.textContent = msg.content;
+                    msgDiv.innerHTML = msg.content;
                     container.appendChild(msgDiv);
                 });
             }
@@ -203,7 +216,7 @@
 
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}`;
-            msgDiv.textContent = content;
+            msgDiv.innerHTML = content;
             container.appendChild(msgDiv);
             container.scrollTop = container.scrollHeight;
         }

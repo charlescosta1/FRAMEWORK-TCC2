@@ -1,13 +1,17 @@
 from fastapi import FastAPI, File, UploadFile, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from models.llama_model import query_llama
+from models.deepseek_model import query_deepseek
+from models.gpt_model import query_gpt
+from models.gemini_model import query_gemini
 
 import shutil
 import os
 import pdfplumber
-import ollama
-from openai import OpenAI
+import asyncio
+
 
 # Cria a aplicação
 app = FastAPI()
@@ -26,15 +30,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 pdf_text = ""
 pdf_tables = []
 current_filename = ""
-
-# Configuração da API GitHub Models
-GITHUB_TOKEN = "Chave_aqui"
-GITHUB_MODEL_DEFAULT = "openai/gpt-4o-mini"
-
-client_openai = OpenAI(
-    base_url="https://models.github.ai/inference",
-    api_key=GITHUB_TOKEN
-)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -88,41 +83,7 @@ async def upload_pdf(file: UploadFile = File(...)):
             {"error": f"Erro ao processar PDF: {str(e)}"},
             status_code=500
         )
-
-def query_ollama(model_name: str, prompt: str) -> str:
-    try:
-        response = ollama.chat(
-            model=model_name,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Você é um assistente especializado em análise de documentos PDF. Responda de forma clara e concisa."
-                },
-                {"role": "user", "content": prompt},
-            ]
-        )
-        return response["message"]["content"]
-    except Exception as e:
-        return f"Erro ao chamar Ollama: {str(e)}"
-
-def query_github_openai(prompt: str, model_name: str = GITHUB_MODEL_DEFAULT) -> str:
-    try:
-        response = client_openai.chat.completions.create(
-            model=model_name,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Você é um assistente especializado em análise de documentos PDF. Responda de forma clara, concisa e use o menor número de tokens possível."
-                },
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=1500,
-            temperature=0.7
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Erro ao chamar GitHub/OpenAI: {str(e)}"
-
+    
 @app.post("/chat/ask")
 async def ask_model(question: str = Form(...), model: str = Form(...)):
     global pdf_text
@@ -139,10 +100,19 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
             status_code=400
         )
     
-    # Limita o tamanho do contexto para melhor performance
-    context_limit = 8000
-    truncated_text = pdf_text[:context_limit]
+    # Limita o tamanho do contexto para tentar melhorar a performance
+    # context_limit = 8000
+    # truncated_text = pdf_text[:context_limit]
+
+    # sem limitar o tamanho
+    truncated_text = pdf_text
     
+    # Salva o conteúdo em um .txt
+    txt_filename = os.path.splitext(current_filename)[0] + ".txt"
+    txt_path = os.path.join("uploads", txt_filename)
+    with open(txt_path, "w", encoding="utf-8") as f:
+        f.write(pdf_text)
+
     # Monta o prompt
     prompt = f"""Você está analisando o seguinte documento:
 
@@ -153,12 +123,30 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
 Pergunta do usuário: {question}
 
 Por favor, responda com base no documento acima."""
+    
+    model_names = ["LLaMA 3.1", "DeepSeek R1", "GPT-4o Mini"] # usado apenas para armazenar os nomes dos modelos para deixar APENAS os nomes dos modelos em negrito na opção "todos".
 
-    # Escolhe o modelo
-    if model.lower().startswith("gpt-") or model.lower().startswith("openai/"):
-        answer = query_github_openai(prompt, model_name=model)
-    else:
-        answer = query_ollama(model, prompt)
+# Escolhe o modelo com base no select do HTML. OBS: a escolha all (todos os modelos) gerará a resposta de cada modelo, então levará mais tempo para ser processada.
+    model = model.lower()
+    
+    if "gemini" in model:
+        answer = query_gemini(prompt)
+    elif "gpt" in model or "openai/" in model:
+        answer = query_gpt(prompt)  
+    elif "llama" in model:
+        answer = query_llama(prompt)
+    elif "deepseek" in model:
+        answer = query_deepseek(prompt)
+    elif "all" in model:
+        results = await asyncio.gather(
+                asyncio.to_thread(query_gemini, prompt),
+                asyncio.to_thread(query_gpt, prompt),
+                asyncio.to_thread(query_llama, prompt),
+                asyncio.to_thread(query_deepseek, prompt)
+            )
+        formatted = "<br><br>".join([f"<strong>{r.splitlines()[0]}</strong><br>{'<br>'.join(r.splitlines()[1:])}" for r in results])
+        return JSONResponse({"answer": formatted})
+    
     
     return JSONResponse({"answer": answer})
 
