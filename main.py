@@ -124,7 +124,7 @@ Pergunta do usuário: {question}
 
 Por favor, responda com base no documento acima."""
     
-    model_names = ["LLaMA 3.1", "DeepSeek R1", "GPT-4o Mini"] # usado apenas para armazenar os nomes dos modelos para deixar APENAS os nomes dos modelos em negrito na opção "todos".
+    # model_names = ["LLaMA 3.1", "DeepSeek R1", "GPT-4o Mini"] # usado apenas para armazenar os nomes dos modelos para deixar APENAS os nomes dos modelos em negrito na opção "todos".
 
 # Escolhe o modelo com base no select do HTML. OBS: a escolha all (todos os modelos) gerará a resposta de cada modelo, então levará mais tempo para ser processada.
     model = model.lower()
@@ -162,4 +162,4 @@ async def get_current_pdf():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="localhost", port=8000)
