@@ -51,19 +51,25 @@ Antes de rodar o projeto, garanta que você possui:
 
 ⚠️ Caso o **Ollama** não esteja instalado, o framework funcionará apenas com os modelos via API, como Gemini e GPT.
 
+
 ### 2️⃣ Clonar o repositório
+
 git clone https://github.com/charlescosta1/FRAMEWORK-TCC2.git
+
 cd FRAMEWORK-TCC2
 
-3️⃣ Instalar dependências
+### 3️⃣ Instalar dependências
+
 pip install -r requirements.txt
 
 ### 4️⃣ Configurar variáveis de ambiente
+
 cp .env.example .env
 
-# Exemplo de .env
-OPENAI_API_KEY=sua_chave_openai_aqui
-GEMINI_API_KEY=sua_chave_gemini_aqui
+## Exemplo de .env
+
+- OPENAI_API_KEY=sua_chave_openai_aqui
+- GEMINI_API_KEY=sua_chave_gemini_aqui
 
 ### 5️⃣ Executar o servidor
 python -m uvicorn main:app --reload
