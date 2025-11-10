@@ -13,6 +13,8 @@ O objetivo geral deste projeto é **desenvolver um framework prático e acessív
 
 A proposta visa **tornar o acesso a informações complexas mais ágil, acessível e confiável**, permitindo que usuários com diferentes níveis de familiaridade compreendam conteúdos técnicos — como editais, normas e regulamentos — por meio de **interação direta com modelos generativos**.
 
+O framework permite comparar a performance de diferentes **modelos de IA generativa** — tanto **locais (via Ollama)** quanto **em nuvem (via APIs oficiais)** — oferecendo uma base prática para estudos e experimentação em **engenharia de prompt**.
+
 ---
 
 ## ⚙️ Tecnologias Utilizadas
@@ -30,7 +32,41 @@ A proposta visa **tornar o acesso a informações complexas mais ágil, acessív
 - HTML + Jinja2 (templating)  
 - JavaScript (requisições assíncronas e interface dinâmica)  
 - CSS
+
 ---
 
-## 🧩 Estrutura do Projeto
+## ⚙️ Instalação e Execução
 
+### 1️⃣ Pré-requisitos
+
+Antes de rodar o projeto, garanta que você possui:
+
+- **Python 3.10+**
+- **pip** (gerenciador de pacotes)
+- **[Ollama](https://ollama.ai/download)** instalado
+- Modelos **DeepSeek** e **Llama** baixados via Ollama:
+  ```bash
+  ollama pull deepseek
+  ollama pull llama3
+
+⚠️ Caso o **Ollama** não esteja instalado, o framework funcionará apenas com os modelos via API, como Gemini e GPT.
+
+### 2️⃣ Clonar o repositório
+git clone https://github.com/charlescosta1/FRAMEWORK-TCC2.git
+cd FRAMEWORK-TCC2
+
+3️⃣ Instalar dependências
+pip install -r requirements.txt
+
+### 4️⃣ Configurar variáveis de ambiente
+cp .env.example .env
+
+# Exemplo de .env
+OPENAI_API_KEY=sua_chave_openai_aqui
+GEMINI_API_KEY=sua_chave_gemini_aqui
+
+### 5️⃣ Executar o servidor
+python -m uvicorn main:app --reload
+
+Após iniciar, acesse no navegador:
+http://localhost:8000
