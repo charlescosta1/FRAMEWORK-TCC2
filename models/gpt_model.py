@@ -8,7 +8,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = "gpt-4o-mini"
 
 client_openai = OpenAI(
-    api_key=OPENAI_API_KEY  # sem base_url customizada
+    api_key=OPENAI_API_KEY
 )
 
 def query_gpt(prompt: str) -> str:
