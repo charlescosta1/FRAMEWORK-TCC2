@@ -8,3 +8,4 @@ pdfplumber
 ollama
 openai
 google-genai
+python-dotenv
