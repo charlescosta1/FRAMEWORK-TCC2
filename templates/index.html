@@ -3,41 +3,28 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Framework PDF</title>
-
-    <!-- CSS externo -->
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-
-    <!--  SIDEBAR -->
+    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <h1 class="app-title">Framework PDF</h1>
         </div>
         
-        <!-- Botão que reseta a conversa -->
-        <button class="new-chat-btn" onclick="resetChat()">
-            <span class="plus-icon">+</span> Nova Conversa
-        </button>
-
         <div class="sidebar-footer">
-            <!-- Faz a mesma coisa que o botão acima -->
-            <button class="clearAll-btn" onclick="resetChat()">🗑️ Apagar conversa</button>
+            <button class="clearAll-btn" onclick="clearChat()">🗑️ Limpar conversa</button>
         </div>
     </aside>
 
-
-    <!-- ==================== ÁREA PRINCIPAL ==================== -->
+    <!-- Main Content -->
     <main class="main-content">
-
-        <!-- Barra superior com seleção de modelo -->
+        <!-- Top Bar -->
         <header class="top-bar">
             <div class="model-selector">
                 <label for="modelSelect">Modelo:</label>
                 <select id="modelSelect">
-                    <!-- Cada value será enviado ao backend -->
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                     <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
                     <option value="llama3.1:8b">LLaMA 3.1</option>
@@ -47,14 +34,13 @@
             </div>
         </header>
 
+        <!-- Chat Area -->
         <div class="chat-area">
             <div class="messages-container" id="messagesContainer">
-                <!-- Mensagem inicial exibida quando não há conversa -->
+                <!-- Mensagens aparecem aqui -->
                 <div class="welcome-message">
                     <h2>Bem-vindo ao Framework PDF</h2>
                     <p>Envie um PDF para começar a fazer perguntas</p>
-
-                    <!-- Entrada de arquivo PDF -->
                     <label class="file-upload-label">
                         <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload()" />
                         <span>📎 Anexar PDF</span>
@@ -63,11 +49,14 @@
             </div>
         </div>
 
-
-        <!-- ÁREA DE ENTRADA DO USUÁRIO  -->
-        <div class="input-area">
+        <!-- Input Area -->
+        <div class="input-area" id="inputArea" style="display: none;">
             <div class="input-wrapper">
-                <textarea id="questionInput" placeholder="Digite sua pergunta..." rows="1"></textarea>
+                <textarea
+                    id="questionInput" 
+                    placeholder="Digite sua pergunta..." 
+                    rows="1"
+                ></textarea>
                 <button type="submit" class="send-btn" onclick="sendQuestion()">
                     <span>Enviar</span>
                 </button>
@@ -75,12 +64,9 @@
         </div>
     </main>
 
-
-    <!--  FUNÇÕES JS  -->
     <script>
         const textarea = document.getElementById("questionInput");
 
-        /* ENVIAR RESPOSTA COM ENTER OU NO BOTÃO */
         textarea.addEventListener("keydown", function (event) {
             if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -88,21 +74,37 @@
             }
         });
 
+        // Carrega mensagens do localStorage ao iniciar
+        let messages = JSON.parse(localStorage.getItem('messages')) || [];
 
-        /* LIMPAR JANELA E VOLTAR PARA TELA INICIAL */
-        function resetChat() {
-            document.getElementById("messagesContainer").innerHTML = `
-                <div class="welcome-message">
-                    <h2>Bem-vindo ao Framework PDF</h2>
-                    <p>Envie um PDF para começar a fazer perguntas</p>
-                    <label class="file-upload-label">
-                        <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload()" />
-                        <span>📎 Anexar PDF</span>
-                    </label>
-                </div>`;
+        function loadMessages() {
+            const container = document.getElementById('messagesContainer');
+            const inputArea = document.getElementById('inputArea');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="welcome-message">
+                        <h2>Bem-vindo ao Framework PDF</h2>
+                        <p>Envie um PDF para começar a fazer perguntas</p>
+                        <label class="file-upload-label">
+                            <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload()" />
+                            <span>📎 Anexar PDF</span>
+                        </label>
+                    </div>
+                `;
+                inputArea.style.display = 'none';
+            } else {
+                container.innerHTML = '';
+                messages.forEach(msg => {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `message ${msg.role}`;
+                    msgDiv.innerHTML = msg.content;
+                    container.appendChild(msgDiv);
+                });
+                inputArea.style.display = 'flex';
+            }
         }
 
-        /* ENVIAR O PDF PARA O BACKEND */
         async function handleFileUpload() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
@@ -113,62 +115,24 @@
 
             try {
                 const res = await fetch('/upload-pdf/', { method: 'POST', body: formData });
-
                 if (res.ok) {
-                    addMessage('system', `📄 PDF "${file.name}" carregado com sucesso!`);
+                    addMessage('system', `📄 PDF "${file.name}" carregado com sucesso! Você já pode fazer perguntas sobre o documento!`);
                     fileInput.value = '';
                 }
-            } catch {
+            } catch (err) {
                 addMessage('system', 'Erro ao enviar PDF');
             }
         }
 
-
-        /* ==================== FUNÇÃO: addMessage ====================
-           Adiciona mensagens na tela (usuário, sistema ou IA)
-        =========================================================== */
-        function addMessage(role, content) {
-            const container = document.getElementById('messagesContainer');
-
-            // Remove mensagem inicial se ainda estiver lá
-            if (container.innerHTML.includes('welcome-message')) {
-                container.innerHTML = '';
-            }
-
-            // Cria o elemento da mensagem
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${role}`;
-            msgDiv.innerHTML = content;
-
-            container.appendChild(msgDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-
-        /* ==================== removeLastMessage ====================
-           Usado para remover "Processando..." antes de mostrar a resposta
-        =========================================================== */
-        function removeLastMessage() {
-            const container = document.getElementById('messagesContainer');
-            const msgs = container.querySelectorAll('.message');
-            if (msgs.length > 0) msgs[msgs.length - 1].remove();
-        }
-
-
-        /* ==================== FUNÇÃO: sendQuestion ====================
-           Envia a pergunta ao backend e exibe a resposta
-        =========================================================== */
         async function sendQuestion() {
             const input = document.getElementById('questionInput');
             const question = input.value.trim();
             if (!question) return;
 
-            addMessage('user', question); // Exibe a pergunta
+            addMessage('user', question);
             input.value = '';
 
             const model = document.getElementById('modelSelect').value;
-
-            // Monta o formulário que será enviado
             const formData = new FormData();
             formData.append('question', question);
             formData.append('model', model);
@@ -178,18 +142,64 @@
             try {
                 const res = await fetch('/chat/ask', { method: 'POST', body: formData });
                 const data = await res.json();
-
-                removeLastMessage(); // Remove "Processando..."
-
+                removeLastMessage();
                 addMessage('assistant', data.answer || data.error);
-
             } catch (err) {
                 removeLastMessage();
                 addMessage('assistant', 'Erro na comunicação com o servidor');
             }
         }
 
-    </script>
+        function addMessage(role, content) {
+            messages.push({ role, content });
+            localStorage.setItem('messages', JSON.stringify(messages));
 
+            const container = document.getElementById('messagesContainer');
+            const inputArea = document.getElementById('inputArea');
+            
+            if (container.innerHTML.includes('welcome-message')) {
+                container.innerHTML = '';
+            }
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            msgDiv.innerHTML = content;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            // Mostra o input se houver mensagens
+            if (messages.length > 0) {
+                inputArea.style.display = 'flex';
+            }
+        }
+
+        function removeLastMessage() {
+            const container = document.getElementById('messagesContainer');
+            const messageElements = container.querySelectorAll('.message');
+            if (messageElements.length > 0) {
+                messageElements[messageElements.length - 1].remove();
+                messages.pop();
+                localStorage.setItem('messages', JSON.stringify(messages));
+            }
+        }
+
+        async function clearChat() {
+            // Limpa mensagens do frontend
+            messages = [];
+            localStorage.removeItem('messages');
+            
+            // Limpa contexto do PDF no backend
+            try {
+                await fetch('/clear-context/', { method: 'POST' });
+            } catch (err) {
+                console.error('Erro ao limpar contexto:', err);
+            }
+            
+            loadMessages();
+        }
+
+        // Carrega mensagens ao iniciar
+        loadMessages();
+    </script>
 </body>
 </html>

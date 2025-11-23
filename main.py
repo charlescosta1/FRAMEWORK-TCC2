@@ -83,6 +83,28 @@ async def upload_pdf(file: UploadFile = File(...)):
             {"error": f"Erro ao processar PDF: {str(e)}"},
             status_code=500
         )
+
+@app.post("/clear-context/")
+async def clear_context():
+    """Limpa o contexto do PDF carregado"""
+    global pdf_text, pdf_tables, current_filename
+    
+    try:
+        # Limpa as variáveis globais
+        pdf_text = ""
+        pdf_tables = []
+        current_filename = ""
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Contexto limpo com sucesso!"
+        })
+    
+    except Exception as e:
+        return JSONResponse(
+            {"error": f"Erro ao limpar contexto: {str(e)}"},
+            status_code=500
+        )
     
 @app.post("/chat/ask")
 async def ask_model(question: str = Form(...), model: str = Form(...)):
@@ -100,10 +122,6 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
             status_code=400
         )
     
-    # Limita o tamanho do contexto para tentar melhorar a performance
-    # context_limit = 8000
-    # truncated_text = pdf_text[:context_limit]
-
     # sem limitar o tamanho
     truncated_text = pdf_text
     
@@ -124,8 +142,6 @@ Pergunta do usuário: {question}
 
 Por favor, responda com base no documento acima."""
     
-    # model_names = ["LLaMA 3.1", "DeepSeek R1", "GPT-4o Mini"] # usado apenas para armazenar os nomes dos modelos para deixar APENAS os nomes dos modelos em negrito na opção "todos".
-
 # Escolhe o modelo com base no select do HTML. OBS: a escolha all (todos os modelos) gerará a resposta de cada modelo, então levará mais tempo para ser processada.
     model = model.lower()
     
