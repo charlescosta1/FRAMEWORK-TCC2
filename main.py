@@ -6,12 +6,28 @@ from models.llama_model import query_llama
 from models.deepseek_model import query_deepseek
 from models.gpt_model import query_gpt
 from models.gemini_model import query_gemini
+from models.pdf_processor import learn_pdf, search, reset as reset_pdf_index
 
 import shutil
 import os
 import pdfplumber
 import asyncio
+import glob
 
+def reset_on_startup():
+    global pdf_text, pdf_tables, current_filename
+
+    pdf_text = ""
+    pdf_tables = []
+    current_filename = ""
+
+    # Remove arquivos gerados
+    for file in glob.glob("*.json"):
+        os.remove(file)
+    for file in glob.glob("*.index"):
+        os.remove(file)
+    for file in glob.glob("uploads/*"):
+         os.remove(file)
 
 # Cria a aplicação
 app = FastAPI()
@@ -41,8 +57,8 @@ async def chat_page(request: Request):
 
 @app.post("/upload-pdf/")
 async def upload_pdf(file: UploadFile = File(...)):
-    global pdf_text, pdf_tables, current_filename 
-    
+    global pdf_text, current_filename
+
     try:
         # Valida se é PDF
         if file.content_type != "application/pdf":
@@ -50,61 +66,51 @@ async def upload_pdf(file: UploadFile = File(...)):
                 {"error": "Por favor, envie um arquivo PDF válido"},
                 status_code=400
             )
-        
+
         # Salva o arquivo
         file_location = os.path.join(UPLOAD_DIR, file.filename)
         with open(file_location, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
-        # Extrai texto e tabelas
+
+        # Extrai texto normal
         extracted_text = ""
-        extracted_tables = []
-        
         with pdfplumber.open(file_location) as pdf:
             for page in pdf.pages:
                 extracted_text += page.extract_text() or ""
-                tables = page.extract_tables()
-                if tables:
-                    extracted_tables.extend(tables)
-        
-        # Armazena globalmente
+
+        # Armazena apenas como texto bruto (backup)
         pdf_text = extracted_text
-        pdf_tables = extracted_tables
         current_filename = file.filename
-        
+
+        # Etapa nova: aprendizado REAL do PDF
+        n_chunks = learn_pdf(extracted_text, file.filename)
+
         return JSONResponse({
             "success": True,
             "filename": file.filename,
-            "message": "PDF carregado com sucesso!"
+            "message": "PDF carregado e indexado com sucesso!",
+            "chunks": n_chunks
         })
-    
+
     except Exception as e:
         return JSONResponse(
             {"error": f"Erro ao processar PDF: {str(e)}"},
             status_code=500
         )
 
+
 @app.post("/clear-context/")
 async def clear_context():
-    """Limpa o contexto do PDF carregado"""
-    global pdf_text, pdf_tables, current_filename
-    
+    global pdf_text, current_filename
+
     try:
-        # Limpa as variáveis globais
         pdf_text = ""
-        pdf_tables = []
         current_filename = ""
-        
-        return JSONResponse({
-            "success": True,
-            "message": "Contexto limpo com sucesso!"
-        })
-    
+        reset_pdf_index()
+        return JSONResponse({"success": True, "message": "Contexto limpo com sucesso!"})
     except Exception as e:
-        return JSONResponse(
-            {"error": f"Erro ao limpar contexto: {str(e)}"},
-            status_code=500
-        )
+        return JSONResponse({"error": f"Erro ao limpar contexto: {str(e)}"}, status_code=500)
+
     
 @app.post("/chat/ask")
 async def ask_model(question: str = Form(...), model: str = Form(...)):
@@ -122,26 +128,23 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
             status_code=400
         )
     
-    # sem limitar o tamanho
-    truncated_text = pdf_text
-    
-    # Salva o conteúdo em um .txt
-    txt_filename = os.path.splitext(current_filename)[0] + ".txt"
-    txt_path = os.path.join("uploads", txt_filename)
-    with open(txt_path, "w", encoding="utf-8") as f:
-        f.write(pdf_text)
+    relevant_chunks = search(question)
+    context = "\n\n".join(relevant_chunks)
 
-    # Monta o prompt
-    prompt = f"""Você está analisando o seguinte documento:
+    prompt = f"""
+    Você é um sistema de perguntas e respostas baseado em documentos.
 
----
-{truncated_text}
----
+    Documento (somente trechos relevantes):
+    ---
+    {context}
+    ---
 
-Pergunta do usuário: {question}
+    Pergunta do usuário:
+    {question}
 
-Por favor, responda com base no documento acima."""
-    
+    Responda APENAS com base no conteúdo acima.
+    """
+        
 # Escolhe o modelo com base no select do HTML. OBS: a escolha all (todos os modelos) gerará a resposta de cada modelo, então levará mais tempo para ser processada.
     model = model.lower()
     

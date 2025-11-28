@@ -104,52 +104,79 @@
                 inputArea.style.display = 'flex';
             }
         }
+        
+        let pdfLoaded = false; // controla se o PDF já foi aprendido
 
         async function handleFileUpload() {
-            const fileInput = document.getElementById('fileInput');
+            const fileInput = document.getElementById("fileInput");
             const file = fileInput.files[0];
             if (!file) return;
 
+            const container = document.getElementById("messagesContainer");
+            const inputArea = document.getElementById("inputArea");
+
+            // Mostra loading de aprendizado
+            addMessage("system", `📚 Aprendendo o PDF "${file.name}"... Aguarde alguns segundos.`);
+
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append("file", file);
 
             try {
-                const res = await fetch('/upload-pdf/', { method: 'POST', body: formData });
-                if (res.ok) {
-                    addMessage('system', `📄 PDF "${file.name}" carregado com sucesso! Você já pode fazer perguntas sobre o documento!`);
-                    fileInput.value = '';
-                }
-            } catch (err) {
-                addMessage('system', 'Erro ao enviar PDF');
-            }
-        }
-
-        async function sendQuestion() {
-            const input = document.getElementById('questionInput');
-            const question = input.value.trim();
-            if (!question) return;
-
-            addMessage('user', question);
-            input.value = '';
-
-            const model = document.getElementById('modelSelect').value;
-            const formData = new FormData();
-            formData.append('question', question);
-            formData.append('model', model);
-
-            addMessage('system', 'Processando...');
-
-            try {
-                const res = await fetch('/chat/ask', { method: 'POST', body: formData });
+                const res = await fetch("/upload-pdf/", { method: "POST", body: formData });
                 const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    addMessage("assistant", "❌ Erro ao processar PDF. Tente outro arquivo.");
+                    return;
+                }
+
+                pdfLoaded = true;
+
+                // Remove mensagem de loading
                 removeLastMessage();
-                addMessage('assistant', data.answer || data.error);
+
+                // Mensagem de sucesso
+                addMessage(
+                    "system",
+                    `✅ PDF <strong>"${file.name}"</strong> carregado e processado com sucesso!<br>
+                    Agora você já pode fazer perguntas sobre o documento.`
+                );
+
+                // Libera o campo de perguntas
+                inputArea.style.display = "flex";
+
+                fileInput.value = "";
             } catch (err) {
                 removeLastMessage();
-                addMessage('assistant', 'Erro na comunicação com o servidor');
+                addMessage("assistant", "❌ Erro ao enviar PDF.");
+                console.error(err);
             }
         }
 
+        async function sendQuestion() { 
+            const input = document.getElementById('questionInput'); 
+            
+            const question = input.value.trim(); if (!question) return; 
+            
+            addMessage('user', question); input.value = ''; 
+            
+            const model = document.getElementById('modelSelect').value; 
+            
+            const formData = new FormData(); formData.append('question', question); 
+            
+            formData.append('model', model); addMessage('system', 'Processando...'); 
+            
+            try { 
+                const res = await fetch('/chat/ask', { method: 'POST', body: formData }); 
+            
+                const data = await res.json(); removeLastMessage(); addMessage('assistant', data.answer || data.error);       
+            } catch (err) { 
+                removeLastMessage(); 
+            
+                addMessage('assistant', 'Erro na comunicação com o servidor'); 
+            } 
+        }
+        
         function addMessage(role, content) {
             messages.push({ role, content });
             localStorage.setItem('messages', JSON.stringify(messages));
@@ -188,6 +215,8 @@
             messages = [];
             localStorage.removeItem('messages');
             
+            pdfLoaded = false;
+
             // Limpa contexto do PDF no backend
             try {
                 await fetch('/clear-context/', { method: 'POST' });
@@ -198,7 +227,10 @@
             loadMessages();
         }
 
-        // Carrega mensagens ao iniciar
+        pdfLoaded = false;
+        localStorage.removeItem('messages');
+        
+        // Carrega a tela inicial
         loadMessages();
     </script>
 </body>
