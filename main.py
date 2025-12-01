@@ -7,7 +7,9 @@ from models.deepseek_model import query_deepseek
 from models.gpt_model import query_gpt
 from models.gemini_model import query_gemini
 from models.pdf_processor import learn_pdf, search, reset as reset_pdf_index
+from datetime import datetime
 
+import time
 import shutil
 import os
 import pdfplumber
@@ -148,6 +150,8 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
 # Escolhe o modelo com base no select do HTML. OBS: a escolha all (todos os modelos) gerará a resposta de cada modelo, então levará mais tempo para ser processada.
     model = model.lower()
     
+    start_time = time.time()
+
     if "gemini" in model:
         answer = query_gemini(prompt)
     elif "gpt" in model or "openai/" in model:
@@ -163,11 +167,46 @@ async def ask_model(question: str = Form(...), model: str = Form(...)):
                 asyncio.to_thread(query_llama, prompt),
                 asyncio.to_thread(query_deepseek, prompt)
             )
-        formatted = "<br><br>".join([f"<strong>{r.splitlines()[0]}</strong><br>{'<br>'.join(r.splitlines()[1:])}" for r in results])
-        return JSONResponse({"answer": formatted})
+        
+        elapsed = time.time() - start_time
+         
+        formatted = "<br><br>".join([
+            f"<strong>{r.splitlines()[0]}</strong><br>{'<br>'.join(r.splitlines()[1:])}"
+            for r in results
+        ])
+
+        # Log para o modo ALL
+        log_chat_interaction(question, formatted, "ALL MODELS", elapsed)
+       
+        return JSONResponse({"answer": formatted})    
     
-    
+    # modelos especificados → grava log normal
+    elapsed = time.time() - start_time
+    log_chat_interaction(question, answer, model, elapsed)
+
     return JSONResponse({"answer": answer})
+
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_FILE = os.path.join(LOG_DIR, "chat_log.txt")
+
+def log_chat_interaction(question, answer, model_name, elapsed_time):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    log_entry = (
+        f"==============================\n"
+        f"Data/Hora: {timestamp}\n"
+        f"Modelo: {model_name}\n"
+        f"Tempo gasto: {elapsed_time:.2f} segundos\n"
+        f"\nPergunta:\n{question}\n"
+        f"\nResposta:\n{answer}\n"
+        f"==============================\n\n"
+    )
+
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(log_entry)
+
 
 @app.get("/api/current-pdf")
 async def get_current_pdf():
