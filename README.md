@@ -1,9 +1,9 @@
 # 🧠 Framework de Engenharia de Prompt para Extração e Interpretação de Documentos PDF
 
-## 🎓 Trabalho de Conclusão de Curso – Sistemas de Informação  
-**Tema:** Modelos de IA Generativa e a Pratica da Engenharia de Prompt
-**Autor:** Carlos Henrique e Charles Dayan 
-**Instituição:** Universidade Federal de Sergipe (UFS)  
+## 🎓 Trabalho de Conclusão de Curso – Sistemas de Informação 
+**Tema:** Modelos de IA Generativa e a Pratica da Engenharia de Prompt       
+**Autor:** Carlos Henrique e Charles Dayan        
+**Instituição:** Universidade Federal de Sergipe (UFS)       
 
 ---
 
