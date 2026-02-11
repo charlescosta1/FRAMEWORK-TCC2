@@ -10,8 +10,8 @@ from typing import List
 # Configurações
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"   # leve e eficaz
 EMBED_DIM = 384                         # dimensão do modelo all-MiniLM-L6-v2
-CHUNK_SIZE = 500                        #palavras por chunk
-CHUNK_OVERLAP = 80                      # overlap entre chunks (palavras)
+CHUNK_SIZE = 150                        # palavras por chunk
+CHUNK_OVERLAP = 50                      # palavras repetidas entre chunks
 TOP_K = 4                               # trechos retornados por busca
 
 PERSIST_DIR = "uploads/indices"
@@ -70,20 +70,7 @@ def _save_index(index: faiss.Index, chunks: List[str], base_filename: str):
     chunks_path = os.path.join(PERSIST_DIR, f"{safe_name}_chunks.json")
     faiss.write_index(index, idx_path)
     with open(chunks_path, "w", encoding="utf-8") as f:
-        json.dump(chunks, f, ensure_ascii=False)
-
-
-def _load_index(base_filename: str):
-    safe_name = os.path.splitext(os.path.basename(base_filename))[0]
-    idx_path = os.path.join(PERSIST_DIR, f"{safe_name}.index")
-    chunks_path = os.path.join(PERSIST_DIR, f"{safe_name}_chunks.json")
-    if not os.path.exists(idx_path) or not os.path.exists(chunks_path):
-        return None, None
-    index = faiss.read_index(idx_path)
-    with open(chunks_path, "r", encoding="utf-8") as f:
-        chunks = json.load(f)
-    return index, chunks
-
+        json.dump(chunks, f, ensure_ascii=False, indent=2)
 
 def learn_pdf(text: str, source_filename: str = "document"):
     """
